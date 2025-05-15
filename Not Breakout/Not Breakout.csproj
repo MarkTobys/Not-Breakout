@@ -9,4 +9,16 @@
     <UseWPF>true</UseWPF>
   </PropertyGroup>
 
+  <ItemGroup>
+    <None Remove="assets\floor-tile.png" />
+    <None Remove="assets\lava-tile.png" />
+    <None Remove="assets\paddle.png" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Resource Include="assets\floor-tile.png" />
+    <Resource Include="assets\lava-tile.png" />
+    <Resource Include="assets\paddle.png" />
+  </ItemGroup>
+
 </Project>

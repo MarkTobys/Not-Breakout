@@ -93,7 +93,7 @@ namespace Not_Breakout
                     paddle.XCoords = gameWidth - paddleWidth; // snap to game edge to avoid overdrawing 
                 }
             }
-            // Check ball state
+            // check if ball is in service mode either move ball to track paddle or serve ball if space is held down
             if (!ball.Active)
             {
                 ball.XPosition = paddle.XCoords + 37;
@@ -104,10 +104,46 @@ namespace Not_Breakout
                     ball.XVelocity = 8;
                 }
             }
-            // if ball is active run collision check
+            // if the ball is active and at same Y Coordinates or lower as the paddle, determine if it has colided with the paddle
+            else if (ball.YVelocity != 0 && ball.YPosition + ballSize >= paddle.YCoords)
+            {
+                CalculatePaddleCollision();
+            }
+            // calulate balls next position
             if (ball.Active)
             {
                 CalculateBallPosition();
+            }
+        }
+
+
+        private void CalculatePaddleCollision()
+        {
+            // determine if the ball is traveling down
+            if (ball.YVelocity > 0)
+            {
+                // determine if the ball is within the top hitbox of the paddle (paddle Y position + 4 pixels)
+                if (ball.YPosition + ballSize <= paddle.YCoords + 4)
+                {
+                    if (ball.XPosition + ballSize >= paddle.XCoords && ball.XPosition <= paddle.XCoords + paddleWidth)
+                    {
+                        ball.YPosition = paddle.YCoords - ballSize; // snap the ball out of the paddle if it is inside it to avoid multiple collisions
+                        ball.YVelocity = -ball.YVelocity;
+                    }
+                }
+            } 
+            else if (ball.YVelocity < 0)
+            {
+                // determine if the ball is within the bottom hitbox of the paddle (paddle Y position + paddle height -4 pixels)
+                int lowerHitBox = paddle.YCoords + paddleHeight;
+                if (ball.YPosition >= lowerHitBox - 4 && ball.YPosition <= lowerHitBox)
+                {
+                    if (ball.XPosition + ballSize >= paddle.XCoords && ball.XPosition <= paddle.XCoords + paddleWidth)
+                    {
+                        ball.YPosition = paddle.YCoords + paddleHeight; // snap the ball out of the paddle if it is inside it to avoid multiple collisions
+                        ball.YVelocity = -ball.YVelocity;
+                    }
+                }
             }
         }
 

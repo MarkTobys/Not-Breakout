@@ -37,7 +37,7 @@ namespace Not_Breakout
         {
             InitializeComponent();
             // add the paddle and ball to the play field
-            paddle = new Paddle(420, 600);
+            paddle = new Paddle(400, 600, Direction.Still);
             paddleImage = new Image
             {
                 Source = Images.Paddle,
@@ -57,96 +57,144 @@ namespace Not_Breakout
             GameCanvas.Children.Add(ballImage);
             // Set up game timer to run at 120 times per second
             gameTimer = new DispatcherTimer();
-            gameTimer.Interval = TimeSpan.FromMilliseconds(8); // clock ticks ever 120th a second
-            gameTimer.Tick += GameLoop; // update the game state every 60th of a second
+            gameTimer.Interval = TimeSpan.FromMilliseconds(12); // clock ticks ever 90th a second
+            gameTimer.Tick += GameLoop; // update the game state every 90th of a second
             gameTimer.Start();
         }
 
-
+        /// <summary>
+        ///  main game loop, subscribed to the gameTimer timer, which updates the state of the game and redraws it 
+        /// </summary>
         private void GameLoop(object sender, EventArgs e)
         {
-            UpdateGame();
+            UpdateGame(); 
             Render();
         }
 
+        /// <summary>
+        /// updates the state of the game to update the location and behaviour of the ball/paddle based on user input and collisions with walls and the paddle
+        /// </summary>
         private void UpdateGame()
         { 
-            // Check arrow key inputs to update paddle location
-            if (Keyboard.IsKeyDown(Key.Left))
+            // Check arrow key inputs to update paddle location and the paddles direction of travel
+            if (Keyboard.IsKeyDown(Key.Left) && !Keyboard.IsKeyDown(Key.Right))
             {
                 if (paddle.XCoords > 8)
                 {
                     paddle.Move(-8);
+                    paddle.Moving = Direction.Left;
                 } else 
                 {
-                    paddle.XCoords = 0; // snap to game edge to avoid underdrawing
-
+                    paddle.XCoords = 0; // snap paddle to game edge to avoid underdrawing
+                    paddle.Moving = Direction.Left;
                 }
             }
-            if (Keyboard.IsKeyDown(Key.Right))
+            else if (Keyboard.IsKeyDown(Key.Right) && !Keyboard.IsKeyDown(Key.Left))
             {
                 if (paddle.XCoords + paddleWidth < gameWidth - 8)
                 {
                     paddle.Move(8);
+                    paddle.Moving = Direction.Right;
                 } else
                 {
-                    paddle.XCoords = gameWidth - paddleWidth; // snap to game edge to avoid overdrawing 
+                    paddle.XCoords = gameWidth - paddleWidth; // snap paddle to game edge to avoid overdrawing 
+                    paddle.Moving = Direction.Right;
                 }
+            } else
+            {
+                paddle.Moving = Direction.Still;
             }
             // check if ball is in service mode either move ball to track paddle or serve ball if space is held down
             if (!ball.Active)
             {
-                ball.XPosition = paddle.XCoords + 37;
+                ball.XPosition = paddle.XCoords + 37; // center of paddle (50px) - half of ball size (26px) to draw ball in center of paddle
                 if (Keyboard.IsKeyDown(Key.Space))
                 {
                     ball.Active = true; // serve the ball if space is pressed
-                    ball.YVelocity = -8;
-                    ball.XVelocity = 8;
+                    if (Keyboard.IsKeyDown(Key.Left) && !Keyboard.IsKeyDown(Key.Right))
+                    {
+                        ball.XVelocity = -5;
+                        ball.YVelocity = -3.5f;
+                    }
+                    else if (Keyboard.IsKeyDown(Key.Right) && !Keyboard.IsKeyDown(Key.Left))
+                    {
+                        ball.XVelocity = 5;
+                        ball.YVelocity = -3.5f;
+                    }
+                    else
+                    {
+                        ball.XVelocity = 0;
+                        ball.YVelocity = -6;
+                    }
                 }
             }
             // if the ball is active and at same Y Coordinates or lower as the paddle, determine if it has colided with the paddle
-            else if (ball.YVelocity != 0 && ball.YPosition + ballSize >= paddle.YCoords)
+            if (ball.YPosition != 0 && ball.YPosition + ballSize >= paddle.YCoords)
             {
                 CalculatePaddleCollision();
             }
             // calulate balls next position
-            if (ball.Active)
-            {
-                CalculateBallPosition();
-            }
+            
+            CalculateBallPosition();
+            
         }
 
-
+        /// <summary>
+        /// Determines if the ball is in a suitable X, Y coordinate space to be deflected by the paddle. If the paddle is moving then the ball will retain its 
+        /// X velocity and the Y velocity will be inversed. If the paddle is still a new X, Y velocity will be calculated dependent on how close to the center
+        /// of the paddle the ball hits. A direct center hit will direct the ball striaght up with 0 X velocity, a far edge hit will direct the ball outward with 
+        /// an X velocity of 6 and a y velocity of -2.5/2.5 
+        /// </summary>
         private void CalculatePaddleCollision()
         {
-            // determine if the ball is traveling down
+            // variables used to calculate the deflection angle of the ball
+            float paddleCenter = paddle.XCoords + (paddleWidth / 2f);
+            float ballCenter = ball.XPosition + (ballSize / 2f);
+            float distanceFromCenter = ballCenter - paddleCenter;
+            float ballYmiddle = ball.YPosition + (ballSize / 2);
+            // check ball's Y direction of travel
             if (ball.YVelocity > 0)
             {
-                // determine if the ball is within the top hitbox of the paddle (paddle Y position + 4 pixels)
-                if (ball.YPosition + ballSize <= paddle.YCoords + 4)
+                // compare ball's Y hitbox (lower half of ball) to paddle hitbox (top 3rd of paddle)
+                if (ballYmiddle <= paddle.YCoords + (paddleHeight * 0.33))
                 {
-                    if (ball.XPosition + ballSize >= paddle.XCoords && ball.XPosition <= paddle.XCoords + paddleWidth)
+                    if (ballCenter >= paddle.XCoords && ballCenter <= paddle.XCoords + paddleWidth)
                     {
                         ball.YPosition = paddle.YCoords - ballSize; // snap the ball out of the paddle if it is inside it to avoid multiple collisions
-                        ball.YVelocity = -ball.YVelocity;
+                        if ((float)paddle.Moving / ball.XVelocity > 0) // if ball is traveling in the same direction as paddle simply invert Y velocity 
+                        {
+                            ball.YVelocity = -ball.YVelocity;
+                        }
+                        else
+                        {
+                            // normalise the deflection distance to a range of [-1, 1]
+                            float normalized = distanceFromCenter / (paddleWidth / 2f);
+                            normalized = Math.Clamp(normalized, -1f, 1f);
+                            // adjust X and Y velocity based on hit location
+                            ball.XVelocity = normalized * 8f; // ranges from -8 to +8
+                            ball.YVelocity = -6f + (Math.Abs(normalized) * 3.5f); // ranges from -6 (center) to -2.5 (edges)
+                        }
                     }
                 }
             } 
             else if (ball.YVelocity < 0)
             {
-                // determine if the ball is within the bottom hitbox of the paddle (paddle Y position + paddle height -4 pixels)
-                int lowerHitBox = paddle.YCoords + paddleHeight;
-                if (ball.YPosition >= lowerHitBox - 4 && ball.YPosition <= lowerHitBox)
+                // check if middle of ball is in paddle hitbox and that top of ball is not below paddle to avoid ball snapping ball to paddle
+                if (ballYmiddle >= paddle.YCoords + (paddleHeight*0.66) && ball.YPosition <= paddle.YCoords + paddleHeight)
                 {
-                    if (ball.XPosition + ballSize >= paddle.XCoords && ball.XPosition <= paddle.XCoords + paddleWidth)
+                    if (ballCenter >= paddle.XCoords && ballCenter <= paddle.XCoords + paddleWidth)
                     {
                         ball.YPosition = paddle.YCoords + paddleHeight; // snap the ball out of the paddle if it is inside it to avoid multiple collisions
-                        ball.YVelocity = -ball.YVelocity;
+                        ball.YVelocity = -ball.YVelocity; // collision location does not impact ball's x,y velocity below paddle
                     }
                 }
             }
         }
 
+        /// <summary>
+        /// calculates the balls next position in game and identifies any collisions with walls, reversing the balls X and Y velocity if a wall collision is detected
+        /// if a wall collision is detected in the next step of the game the ball will be snapped to the wall it will collide with to avoid phasing into the wall
+        /// </summary>
         private void CalculateBallPosition()
         {
             // X-axis movement and collision
@@ -187,7 +235,9 @@ namespace Not_Breakout
 
 
 
-        // Redraw the game elements (ball, paddle) to the play field with updated coordinates
+        /// <summary>
+        /// Redraws the game state based on the new game element locations calculated in UpdateGame
+        /// </summary>
         private void Render()
         {
             Canvas.SetLeft(paddleImage, paddle.XCoords);

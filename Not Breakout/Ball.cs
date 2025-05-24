@@ -4,6 +4,11 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
+/// <summary>
+/// Represents a ball on the play field
+/// Keeps track of the balls current position and x,y velocity, as well as if the ball is in an active state (free moving) or 
+/// service state (attached to the paddle for serving)
+/// </summary>
 namespace Not_Breakout
 {
     public class Ball
@@ -27,9 +32,7 @@ namespace Not_Breakout
             XPosition = xPosition;
             YPosition = yPosition;
             Active = active;
-        }
-
-        
+        }      
 
     }
 }

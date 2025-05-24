@@ -12,6 +12,10 @@ public enum Direction
     Still = 0
 };
 
+/// <summary>
+/// Represents the paddle on the play field
+/// Keeps track of the paddle's x and y coordinates, as well as the current movement status of the paddle
+/// </summary>
 namespace Not_Breakout
 {
     public class Paddle
@@ -29,12 +33,5 @@ namespace Not_Breakout
             YCoords = yCoords;
             Moving = moving;
         }
-
-        // Move the paddle on the x axis a set amount
-        public void Move(int xUnits)
-        {
-            XCoords += xUnits;
-        }
-
     }
 }

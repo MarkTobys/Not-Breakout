@@ -18,7 +18,11 @@
 
   <ItemGroup>
     <Resource Include="assets\ball.png" />
+    <Resource Include="assets\basic-brick.png" />
     <Resource Include="assets\floor-tile.png" />
+    <Resource Include="assets\hard-brick-2.png" />
+    <Resource Include="assets\hard-brick-3.png" />
+    <Resource Include="assets\hard-brick.png" />
     <Resource Include="assets\lava-tile.png" />
     <Resource Include="assets\paddle.png" />
   </ItemGroup>

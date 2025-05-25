@@ -169,12 +169,23 @@ namespace Not_Breakout
             //    CheckBrickCollision();
             //}
             // calulate balls next position
-            Tuple<float, float> newX = NextX();
-            Tuple<float, float> newY = NextY();
-            ball.XPosition = newX.Item1;
-            ball.XVelocity = newX.Item2;
-            ball.YPosition = newY.Item1;
-            ball.YVelocity = newY.Item2;
+            (float xPos, float xVel) newX = NextX();
+            (float yPos, float yVel) newY = NextY();
+            // check OOB
+            (int? x, int? y) intercept = (null, null);
+            if (Math.Sign(ball.XVelocity) != Math.Sign(newX.xVel)) { intercept.x = newX.xPos < 0 ? 0 : gameWidth; }
+            if (Math.Sign(ball.YVelocity) != Math.Sign(newY.yVel)) { intercept.y = newY.yPos < 0 ? 0 : gameHeight; }
+            if (intercept.x != null || intercept.y != null) // adjust ball's x,y coords if OOB is detected
+            {
+                BallCollisionCheck(newX, newY, intercept);
+            }
+            else
+            {
+                ball.XPosition = newX.xPos;
+                ball.XVelocity = newX.xVel;
+                ball.YPosition = newY.yPos;
+                ball.YVelocity = newY.yVel;
+            }
 
         }
 
@@ -282,45 +293,105 @@ namespace Not_Breakout
         }
 
         /// <summary>
-        /// calculates the balls next X position in game and identifies any collisions with walls, reversing the balls X and Y velocity if a wall collision is detected
+        /// calculates the balls next X position in game and identifies any collisions with walls, reversing the balls X velocity if a wall collision is detected
         /// </summary>
-        private Tuple<float, float> NextX()
+        private (float xPos, float xVel) NextX()
         {
             float nextXPos = ball.XPosition + ball.XVelocity;
             float nextXVel = ball.XVelocity;
             if (nextXPos <= 0)
             {
-                nextXPos = 0;
                 nextXVel = -ball.XVelocity;
             }
             else if (nextXPos + ballSize >= gameWidth)
             {
-                nextXPos = gameWidth - ballSize;
                 nextXVel = -ball.XVelocity;
             }
-            return Tuple.Create(nextXPos, nextXVel);
+            return (nextXPos, nextXVel);
         }
 
         /// <summary>
         /// calculates the balls next Y position in game and identifies any collisions with walls, reversing Y velocity if a wall collision is detected
         /// 
         /// </summary>
-        private Tuple<float, float> NextY()
+        private(float yPos, float yVel) NextY()
         { 
             // Y-axis movement and collision
             float nextYPos = ball.YPosition + ball.YVelocity;
             float nextYVel = ball.YVelocity; 
             if (nextYPos <= 0)
             {
-                nextYPos = 0;
                 nextYVel = -ball.YVelocity;
             }
             else if (nextYPos + ballSize >= gameHeight)
             {
-                nextYPos = gameHeight - ballSize;
                 nextYVel = -ball.YVelocity;
             }
-            return Tuple.Create(nextYPos, nextYVel);
+            return (nextYPos, nextYVel);
+        }
+
+        /// <summary>
+        /// Using a provided X and/or Y intercept, determines the line 
+        /// </summary>
+        /// <param name="newX"></param>
+        /// <param name="newY"></param>
+        /// <param name="intercept"></param>
+        private void BallCollisionCheck((float xPos, float xVel) newX, (float yPos, float yVel) newY, (int? x, int? y) intercept) 
+        {
+            float dx = ball.XPosition - newX.xPos;
+            float dy = ball.YPosition - newY.yPos;
+            float gradient = dx == 0 ? 0 : dy / dx; // prevents divide by zero when ball is moving vertically  
+            float offset = ball.YPosition - (gradient * ball.XPosition);
+            // if both x and y intercepts are not null, find the coordinate with the smaller offset from the intercept and use that
+            if (intercept.x != null && intercept.y != null)
+            {
+                float xAbs = Math.Abs(ball.XPosition + ballRadius - (float)intercept.x);
+                float yAbs = Math.Abs(ball.YPosition + ballRadius - (float)intercept.y);
+                if (xAbs < yAbs)
+                {
+                    intercept.y = null;
+                }
+                else if (yAbs < xAbs)
+                {
+                    intercept.x = null;
+                }
+                else // in the unlikely event where the ball is OOB of equal distance from the game canvas just use y = null
+                {
+                    intercept.y = null;
+                }
+            }
+            // calulate where the point at which the ball would hit the wall before hitting OOB
+            if (intercept.x != null && intercept.y == null)
+            {
+                if (ball.XVelocity < 0)
+                {
+                    ball.XPosition = (float)intercept.x;
+                    ball.YPosition = gradient * (float)intercept.x + offset;
+                    ball.XVelocity = newX.xVel;
+                } 
+                else
+                {
+                    ball.XPosition = (float)intercept.x - ballSize;
+                    ball.YPosition = gradient * ((float)intercept.x - ballSize) + offset; 
+                    ball.XVelocity = newX.xVel;
+                }
+            } 
+            else if (intercept.x == null && intercept.y  != null) 
+            {
+                if (ball.YVelocity < 0)
+                {
+                    ball.YPosition = (float)intercept.y;
+                    ball.XPosition = (ball.YPosition - offset) / gradient;
+                    ball.YVelocity = newY.yVel;
+                }
+                else
+                {
+                    ball.YPosition = (float)intercept.y - ballSize;
+                    ball.XPosition = (((float)intercept.y - ballSize) - offset) / gradient;
+                    ball.YVelocity = newY.yVel;
+                }
+            }
+            return;
         }
 
         /// <summary>

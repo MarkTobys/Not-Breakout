@@ -72,10 +72,14 @@ namespace Not_Breakout
             brickGrid = new BrickGrid(140);
             for (int i = 0; i < cols; i++)
             {
-                for (int j = 2; j < rows; j++)
+                for (int j = 0; j < rows; j++)
                 {
                     brickGrid.Grid[i, j] = BrickType.Normal;
                 }
+            }
+            for (int k = 0; k < rows; k++)
+            {
+
             }
             DrawBricks();
             // Draw the paddle and ball to the screen
@@ -159,13 +163,19 @@ namespace Not_Breakout
             {
                 CalculatePaddleCollision();
             }
-            if (ball.YPosition <= 300)
-            {
-                CheckBrickCollision();
-            }
+
+            //if ((ball.YVelocity < 0 && ball.YPosition <= 320) || (ball.YVelocity > 0 && (ball.YPosition + ballSize) < 300)) 
+            //{
+            //    CheckBrickCollision();
+            //}
             // calulate balls next position
-            CalculateBallPosition();
-            
+            Tuple<float, float> newX = NextX();
+            Tuple<float, float> newY = NextY();
+            ball.XPosition = newX.Item1;
+            ball.XVelocity = newX.Item2;
+            ball.YPosition = newY.Item1;
+            ball.YVelocity = newY.Item2;
+
         }
 
         /// <summary>
@@ -227,25 +237,29 @@ namespace Not_Breakout
         private void CheckBrickCollision()
         {
             // use the current x,y velocity to determine the collision type (default: draw coordinates, top left corner)
+            float ballCurrentX = ball.XVelocity > 0 ? ball.XPosition + ballSize : ball.XPosition;
+            float ballCurrentY = ball.YVelocity < 0 ? ball.YPosition : ball.YPosition + ballSize;
             float ballNextX = ball.XVelocity > 0 ? ball.XPosition + ball.XVelocity + ballSize : ball.XPosition + ball.XVelocity;
             float ballNextY = ball.YVelocity < 0 ? ball.YPosition + ball.YVelocity : ball.YPosition + ball.YVelocity + ballSize;
-            // calulate the grid sector the ball will be in next update
-            int ballCol = (int)ballNextX / 60; 
-            int ballRow = (int)ballNextY / 30;
-            // handle OOB
-            if (ballRow > 9) { ballRow = 9; }
-            if (ballCol > 13) { ballCol = 13; }
-            BrickType hitBrick = brickGrid.Grid[ballCol, ballRow];
-            if (hitBrick != BrickType.Empty)
+            // calulate the grid sector the ball is in now and where it will be next tick
+            int ballCol = (int)ballCurrentX / 60;
+            int ballRow = (int)ballCurrentY / 30;
+            int ballColNext = (int)ballNextX / 60; 
+            int ballRowNext = (int)ballNextY / 30;
+            if (ballCol != ballColNext || ballRow != ballRowNext) 
             {
-                // if brick is normal or hard brick 3, lower brick count
-                if (hitBrick == BrickType.Normal || hitBrick == BrickType.Hard3)
+                BrickType hitBrick = brickGrid.Grid[ballColNext, ballRowNext];
+                if (hitBrick != BrickType.Empty)
                 {
-                    brickGrid.BricksLeft--;
+                    // if brick is normal or hard brick 3, lower brick count
+                    if (hitBrick == BrickType.Normal || hitBrick == BrickType.Hard3)
+                    {
+                        brickGrid.BricksLeft--;
+                    }
+                    BrickType newBrick = GetWeakerBrick(hitBrick);
+                    brickGrid.Grid[ballColNext, ballRowNext] = newBrick;
+                    DrawBricks();
                 }
-                BrickType newBrick = GetWeakerBrick(hitBrick);
-                brickGrid.Grid[ballCol, ballRow] = newBrick;
-                DrawBricks();
             }
             
         }
@@ -268,44 +282,45 @@ namespace Not_Breakout
         }
 
         /// <summary>
-        /// calculates the balls next position in game and identifies any collisions with walls, reversing the balls X and Y velocity if a wall collision is detected
-        /// if a wall collision is detected in the next step of the game the ball will be snapped to the wall it will collide with to avoid phasing into the wall
+        /// calculates the balls next X position in game and identifies any collisions with walls, reversing the balls X and Y velocity if a wall collision is detected
         /// </summary>
-        private void CalculateBallPosition()
+        private Tuple<float, float> NextX()
         {
-            // X-axis movement and collision
-            float nextX = ball.XPosition + ball.XVelocity;
-            if (nextX <= 0)
+            float nextXPos = ball.XPosition + ball.XVelocity;
+            float nextXVel = ball.XVelocity;
+            if (nextXPos <= 0)
             {
-                ball.XPosition = 0;
-                ball.XVelocity = -ball.XVelocity;
+                nextXPos = 0;
+                nextXVel = -ball.XVelocity;
             }
-            else if (nextX + ballSize >= gameWidth)
+            else if (nextXPos + ballSize >= gameWidth)
             {
-                ball.XPosition = gameWidth - ballSize;
-                ball.XVelocity = -ball.XVelocity;
+                nextXPos = gameWidth - ballSize;
+                nextXVel = -ball.XVelocity;
             }
-            else
-            {
-                ball.XPosition = nextX;
-            }
+            return Tuple.Create(nextXPos, nextXVel);
+        }
 
+        /// <summary>
+        /// calculates the balls next Y position in game and identifies any collisions with walls, reversing Y velocity if a wall collision is detected
+        /// 
+        /// </summary>
+        private Tuple<float, float> NextY()
+        { 
             // Y-axis movement and collision
-            float nextY = ball.YPosition + ball.YVelocity;
-            if (nextY <= 0)
+            float nextYPos = ball.YPosition + ball.YVelocity;
+            float nextYVel = ball.YVelocity; 
+            if (nextYPos <= 0)
             {
-                ball.YPosition = 0;
-                ball.YVelocity = -ball.YVelocity;
+                nextYPos = 0;
+                nextYVel = -ball.YVelocity;
             }
-            else if (nextY + ballSize >= gameHeight)
+            else if (nextYPos + ballSize >= gameHeight)
             {
-                ball.YPosition = gameHeight - ballSize;
-                ball.YVelocity = -ball.YVelocity;
+                nextYPos = gameHeight - ballSize;
+                nextYVel = -ball.YVelocity;
             }
-            else
-            {
-                ball.YPosition = nextY;
-            }
+            return Tuple.Create(nextYPos, nextYVel);
         }
 
         /// <summary>

@@ -380,15 +380,31 @@ namespace Not_Breakout
             {
                 if (ball.YVelocity < 0)
                 {
-                    ball.YPosition = (float)intercept.y;
-                    ball.XPosition = (ball.YPosition - offset) / gradient;
-                    ball.YVelocity = newY.yVel;
+                    if (ball.XVelocity == 0) // if ball is moving vertically
+                    {
+                        ball.YPosition = (float)intercept.y;
+                        ball.YVelocity = newY.yVel;
+                    } 
+                    else 
+                    {
+                        ball.YPosition = (float)intercept.y;
+                        ball.XPosition = (ball.YPosition - offset) / gradient;
+                        ball.YVelocity = newY.yVel;
+                    }
                 }
                 else
                 {
-                    ball.YPosition = (float)intercept.y - ballSize;
-                    ball.XPosition = (((float)intercept.y - ballSize) - offset) / gradient;
-                    ball.YVelocity = newY.yVel;
+                    if (ball.XVelocity == 0)
+                    {
+                        ball.YPosition = (float)intercept.y - ballSize;
+                        ball.YVelocity = newY.yVel;
+                    }
+                    else
+                    {
+                        ball.YPosition = (float)intercept.y - ballSize;
+                        ball.XPosition = (((float)intercept.y - ballSize) - offset) / gradient;
+                        ball.YVelocity = newY.yVel;
+                    }
                 }
             }
             return;

@@ -44,8 +44,8 @@ namespace Not_Breakout
         private const int paddleWidth = 100;
         private const int paddleHeight = 20;
         // ball constant (width and height are the same size)
-        private const int ballSize = 26;
-        private const int ballRadius = 13;
+        private const int ballSize = 27;
+        private const int ballRadius = 14;
         // rows and colums defined
         private int rows = 10;
         private int cols = 14;
@@ -60,7 +60,7 @@ namespace Not_Breakout
                 Width = paddleWidth,
                 Height = paddleHeight
             };
-            ball = new Ball(0, 0, 0, paddle.YCoords - ballSize, false);
+            ball = new Ball(0, 0, 0, paddle.YCoords - ballRadius, false);
 
             ballImage = new Image
             {
@@ -130,14 +130,15 @@ namespace Not_Breakout
                     paddle.XCoords = gameWidth - paddleWidth; // snap paddle to game edge to avoid overdrawing 
                     paddle.Moving = Direction.Right;
                 }
-            } else
+            } 
+            else
             {
                 paddle.Moving = Direction.Still;
             }
             // check if ball is in service mode either move ball to track paddle or serve ball if space is held down
             if (!ball.Active)
             {
-                ball.XPosition = paddle.XCoords + 37; // center of paddle (50px) - half of ball size (26px) to draw ball in center of paddle
+                ball.XPosition = paddle.XCoords + (paddleWidth/2); // center ball on paddle
                 if (Keyboard.IsKeyDown(Key.Space))
                 {
                     ball.Active = true; // serve the ball if space is pressed
@@ -159,7 +160,7 @@ namespace Not_Breakout
                 }
             }
             // if the ball is active and at same Y Coordinates or lower as the paddle, determine if it has colided with the paddle
-            if (ball.YVelocity != 0 && ball.YPosition + ballSize >= paddle.YCoords)
+            if (ball.YVelocity != 0 && ball.YPosition + ballRadius >= paddle.YCoords)
             {
                 CalculatePaddleCollision();
             }
@@ -173,8 +174,8 @@ namespace Not_Breakout
             (float yPos, float yVel) newY = NextY();
             // check OOB
             (int? x, int? y) intercept = (null, null);
-            if (Math.Sign(ball.XVelocity) != Math.Sign(newX.xVel)) { intercept.x = newX.xPos < 0 ? 0 : gameWidth; }
-            if (Math.Sign(ball.YVelocity) != Math.Sign(newY.yVel)) { intercept.y = newY.yPos < 0 ? 0 : gameHeight; }
+            if (Math.Sign(ball.XVelocity) != Math.Sign(newX.xVel)) { intercept.x = newX.xPos <= ballRadius ? ballRadius : gameWidth - ballRadius; }
+            if (Math.Sign(ball.YVelocity) != Math.Sign(newY.yVel)) { intercept.y = newY.yPos <= ballRadius ? ballRadius : gameHeight - ballRadius; }
             if (intercept.x != null || intercept.y != null) // adjust ball's x,y coords if OOB is detected
             {
                 BallCollisionCheck(newX, newY, intercept);
@@ -199,18 +200,16 @@ namespace Not_Breakout
         {
             // variables used to calculate the deflection angle of the ball
             float paddleCenter = paddle.XCoords + (paddleWidth / 2f);
-            float ballCenter = ball.XPosition + ballRadius;
-            float distanceFromCenter = ballCenter - paddleCenter;
-            float ballYmiddle = ball.YPosition + ballRadius;
+            float distanceFromCenter = ball.XPosition - paddleCenter;
             // check ball's Y direction of travel
             if (ball.YVelocity > 0)
             {
-                // compare ball's Y hitbox (lower half of ball) to paddle hitbox (top 3rd of paddle)
-                if (ballYmiddle <= paddle.YCoords + (paddleHeight * 0.33))
+                // compare ball's Y hitbox (lower half of ball) to paddle hitbox (top half of paddle)
+                if (ball.YPosition + ballRadius  <= paddle.YCoords + (paddleHeight / 2))
                 {
-                    if (ballCenter >= paddle.XCoords && ballCenter <= paddle.XCoords + paddleWidth)
+                    if (ball.XPosition + ballRadius >= paddle.XCoords && ball.XPosition - ballRadius <= paddle.XCoords + paddleWidth)
                     {
-                        ball.YPosition = paddle.YCoords - ballSize; // snap the ball out of the paddle if it is inside it to avoid multiple collisions
+                        ball.YPosition = paddle.YCoords - ballRadius; // snap the ball out of the paddle if it is inside it to avoid multiple collisions
                         if ((float)paddle.Moving / ball.XVelocity > 0) // if ball is traveling in the same direction as paddle simply invert Y velocity 
                         {
                             ball.YVelocity = -ball.YVelocity;
@@ -230,9 +229,9 @@ namespace Not_Breakout
             else if (ball.YVelocity < 0)
             {
                 // check if middle of ball is in paddle hitbox and that top of ball is not below paddle to avoid ball snapping ball to paddle
-                if (ballYmiddle >= paddle.YCoords + (paddleHeight*0.66) && ball.YPosition <= paddle.YCoords + paddleHeight)
+                if (ball.YPosition >= paddle.YCoords + (paddleHeight / 2) && ball.YPosition - ballRadius <= paddle.YCoords + paddleHeight)
                 {
-                    if (ballCenter >= paddle.XCoords && ballCenter <= paddle.XCoords + paddleWidth)
+                    if (ball.XPosition + ballRadius >= paddle.XCoords && ball.XPosition - ballRadius <= paddle.XCoords + paddleWidth)
                     {
                         ball.YPosition = paddle.YCoords + paddleHeight; // snap the ball out of the paddle if it is inside it to avoid multiple collisions
                         ball.YVelocity = -ball.YVelocity; // collision location does not impact ball's x,y velocity below paddle
@@ -299,11 +298,11 @@ namespace Not_Breakout
         {
             float nextXPos = ball.XPosition + ball.XVelocity;
             float nextXVel = ball.XVelocity;
-            if (nextXPos <= 0)
+            if (nextXPos <= ballRadius)
             {
                 nextXVel = -ball.XVelocity;
             }
-            else if (nextXPos + ballSize >= gameWidth)
+            else if (nextXPos + ballRadius >= gameWidth)
             {
                 nextXVel = -ball.XVelocity;
             }
@@ -319,11 +318,11 @@ namespace Not_Breakout
             // Y-axis movement and collision
             float nextYPos = ball.YPosition + ball.YVelocity;
             float nextYVel = ball.YVelocity; 
-            if (nextYPos <= 0)
+            if (nextYPos <= ballRadius)
             {
                 nextYVel = -ball.YVelocity;
             }
-            else if (nextYPos + ballSize >= gameHeight)
+            else if (nextYPos + ballRadius >= gameHeight)
             {
                 nextYVel = -ball.YVelocity;
             }
@@ -345,8 +344,8 @@ namespace Not_Breakout
             // if both x and y intercepts are not null, find the coordinate with the smaller offset from the intercept and use that
             if (intercept.x != null && intercept.y != null)
             {
-                float xAbs = Math.Abs(ball.XPosition + ballRadius - (float)intercept.x);
-                float yAbs = Math.Abs(ball.YPosition + ballRadius - (float)intercept.y);
+                float xAbs = Math.Abs(ball.XPosition - (float)intercept.x);
+                float yAbs = Math.Abs(ball.YPosition - (float)intercept.y);
                 if (xAbs < yAbs)
                 {
                     intercept.y = null;
@@ -371,8 +370,8 @@ namespace Not_Breakout
                 } 
                 else
                 {
-                    ball.XPosition = (float)intercept.x - ballSize;
-                    ball.YPosition = gradient * ((float)intercept.x - ballSize) + offset; 
+                    ball.XPosition = (float)intercept.x;
+                    ball.YPosition = gradient * ((float)intercept.x) + offset; 
                     ball.XVelocity = newX.xVel;
                 }
             } 
@@ -396,13 +395,13 @@ namespace Not_Breakout
                 {
                     if (ball.XVelocity == 0)
                     {
-                        ball.YPosition = (float)intercept.y - ballSize;
+                        ball.YPosition = (float)intercept.y;
                         ball.YVelocity = newY.yVel;
                     }
                     else
                     {
-                        ball.YPosition = (float)intercept.y - ballSize;
-                        ball.XPosition = (((float)intercept.y - ballSize) - offset) / gradient;
+                        ball.YPosition = (float)intercept.y;
+                        ball.XPosition = ((float)intercept.y - offset) / gradient;
                         ball.YVelocity = newY.yVel;
                     }
                 }
@@ -418,8 +417,8 @@ namespace Not_Breakout
             // draw the ball and paddle
             Canvas.SetLeft(paddleImage, paddle.XCoords);
             Canvas.SetTop(paddleImage, paddle.YCoords);
-            Canvas.SetLeft(ballImage, ball.XPosition);
-            Canvas.SetTop(ballImage, ball.YPosition);
+            Canvas.SetLeft(ballImage, ball.XPosition - ballRadius);
+            Canvas.SetTop(ballImage, ball.YPosition - ballRadius);
         }
 
         ///<summary>
